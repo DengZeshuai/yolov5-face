@@ -1,0 +1,3 @@
+CUDA_VISIBLE_DEVICES=4 python detect_face.py --image /mnt/cephfs/home/dengzeshuai/data/Detection/widerface/val/11.jpg --weights runs/train/yolov5s_coco_pre_widerface_b64/weights/best.pt --save_folder runs/detect/yolov5s
+
+CUDA_VISIBLE_DEVICES=3 python detect_face.py --image /mnt/cephfs/dataset/widerface/WIDER_val/images/ --weights runs/train/yolov5le_5x5_stem_coco_pre_p800b64/weights/best.pt --save_folder runs/detect/yolov5le_5x5_stem_coco_pre

@@ -28,14 +28,14 @@ def convert(size, box):
     return x, y, w, h
 
 
-def wider2face(root, ignore_small=0):
+def wider2face(root, phase='val', ignore_small=0):
     data = {}
-    with open('{}/label.txt'.format(root), 'r') as f:
+    with open('{}/{}/label.txt'.format(root, phase), 'r') as f:
         lines = f.readlines()
         for line in tqdm(lines):
             line = line.strip()
             if '#' in line:
-                path = '{}/images/{}'.format(root, line.split()[-1])
+                path = '{}/{}/images/{}'.format(root, phase, line.split()[-1])
                 img = cv2.imread(path)
                 height, width, _ = img.shape
                 data[path] = list()
@@ -53,15 +53,15 @@ def wider2face(root, ignore_small=0):
 if __name__ == '__main__':
     if len(sys.argv) == 1:
         print('Missing path to WIDERFACE folder.')
-        print('Run command: python3 val2yolo.py /path/to/original/widerface/val [/path/to/save/widerface/val]')
+        print('Run command: python3 val2yolo.py /path/to/original/widerface [/path/to/save/widerface/val]')
         exit(1)
     elif len(sys.argv) > 3:
         print('Too many arguments were provided.')
-        print('Run command: python3 val2yolo.py /path/to/original/widerface/val [/path/to/save/widerface/val]')
+        print('Run command: python3 val2yolo.py /path/to/original/widerface [/path/to/save/widerface/val]')
         exit(1)
 
     root_path = sys.argv[1]
-    if not os.path.isfile(os.path.join(root_path, 'label.txt')):
+    if not os.path.isfile(os.path.join(root_path, 'val', 'label.txt')):
         print('Missing label.txt file.')
         exit(1)
 
@@ -75,7 +75,7 @@ if __name__ == '__main__':
     else:
         save_path = sys.argv[2]
 
-    datas = wider2face(root_path)
+    datas = wider2face(root_path, phase='val')
     for idx, data in enumerate(datas.keys()):
         pict_name = os.path.basename(data)
         out_img = f'{save_path}/{idx}.jpg'

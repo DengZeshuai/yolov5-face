@@ -2,6 +2,8 @@
 import argparse
 import time
 from pathlib import Path
+import os
+import glob
 
 import cv2
 import torch
@@ -70,11 +72,14 @@ def show_results(img, xyxy, conf, landmarks, class_num):
 
 
 
-def detect_one(model, image_path, device):
+def detect_one(opt, model, image_path, device):
     # Load model
-    img_size = 800
-    conf_thres = 0.3
-    iou_thres = 0.5
+    # img_size = 800
+    # conf_thres = 0.3
+    # iou_thres = 0.5
+    img_size = opt.img_size
+    conf_thres = opt.conf_thres
+    iou_thres = opt.iou_thres
 
     orgimg = cv2.imread(image_path)  # BGR
     img0 = copy.deepcopy(orgimg)
@@ -89,7 +94,7 @@ def detect_one(model, image_path, device):
 
     img = letterbox(img0, new_shape=imgsz)[0]
     # Convert
-    img = img[:, :, ::-1].transpose(2, 0, 1).copy()  # BGR to RGB, to 3x416x416
+    img = img[:, :, ::-1].transpose(2, 0, 1).copy()  # BGR to RGB, hwc to chw
 
     # Run inference
     t0 = time.time()
@@ -128,19 +133,45 @@ def detect_one(model, image_path, device):
                 landmarks = det[j, 5:15].view(-1).tolist()
                 class_num = det[j, 15].cpu().numpy()
                 orgimg = show_results(orgimg, xyxy, conf, landmarks, class_num)
+    
+    if not os.path.exists(opt.save_folder):
+        os.makedirs(opt.save_folder)
+    save_path = os.path.join(opt.save_folder, os.path.basename(image_path))
+    cv2.imwrite(save_path, orgimg)
 
-    cv2.imwrite('result.jpg', orgimg)
 
+def detect_face(opt, model, device):
+    if not os.path.exists(opt.image):
+        raise "the input path does not exist."
+    
+    if os.path.isfile(opt.image):
+        detect_one(opt, model, opt.image, device)
+        return
 
-
+    if os.path.isdir(opt.image):
+        image_paths = sorted(glob.glob(os.path.join(opt.image, "*.jpg")))
+        # to walk into the next level subfolders
+        image_paths += sorted(glob.glob(os.path.join(opt.image, "*", "*.jpg")))
+        for img in image_paths:
+            print("processing {} ...".format(os.path.basename(img)))
+            detect_one(opt, model, img, device)
+        return
+    else:
+        raise "the input path must be a file or folder."
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', nargs='+', type=str, default='runs/train/exp5/weights/last.pt', help='model.pt path(s)')
-    parser.add_argument('--image', type=str, default='data/images/test.jpg', help='source')  # file/folder, 0 for webcam
+    parser.add_argument('--weights', nargs='+', type=str, default='runs/train/yolov5s_coco_pre_widerface_b64/weights/best.pt', help='model.pt path(s)')
+    parser.add_argument('--image', type=str, default='/mnt/cephfs/home/dengzeshuai/data/Detection/widerface/val/11.jpg', help='source')  # file/folder, 0 for webcam
     parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
+    parser.add_argument('--conf-thres', type=float, default=0.3, help='object confidence threshold')
+    parser.add_argument('--iou-thres', type=float, default=0.5, help='IOU threshold for NMS')
+    parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
+    parser.add_argument('--save_folder', default='./runs/detect/yolov5s', type=str, help='Dir to save results')
     opt = parser.parse_args()
     print(opt)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if opt.device else "cpu")
     model = load_model(opt.weights, device)
-    detect_one(model, opt.image, device)
+    # detect_one(model, opt.image, device)
+    detect_face(opt, model, device)
