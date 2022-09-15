@@ -1,3 +1,7 @@
 test_logs/*
 widerface_*/
 build/*
+*.pyc
+*.c
+*.o
+*.so
